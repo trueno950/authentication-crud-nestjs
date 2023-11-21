@@ -18,7 +18,7 @@ import {
   ApiParam,
 } from '@nestjs/swagger';
 import { BrandService } from './brand.service';
-import { CreateBrandDto, EditBrandDto } from './dto';
+import { CreateBrandDto, EditBrandDto, BrandStatusDto } from './dto';
 import {
   ApiOkPaginatedResponse,
   ApiPaginationQuery,
@@ -31,8 +31,9 @@ import {
 
 import { Brand } from './brand.entity';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { Status } from './enums/status.enum';
 
-const BRAND_PAGINATION_CONFIG: PaginateConfig<any>= {
+const BRAND_PAGINATION_CONFIG: PaginateConfig<any> = {
   defaultSortBy: [['name', 'DESC']],
   sortableColumns: ['name', 'barcode', 'createdAt', 'updatedAt'],
   filterableColumns: {
@@ -119,5 +120,30 @@ export class BrandController {
   ): Promise<void> {
     await this.brandService.deleteBrand(parseInt(param.brandId));
     res.status(HttpStatus.OK).json({ message: 'Brand updated successful' });
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch(':brandId/activate')
+  @ApiOperation({ summary: 'Activate or Deactivate a brand by ID' })
+  @ApiParam({ name: 'brandId', description: 'ID of the brand' })
+  @ApiBody({ type: BrandStatusDto })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Brand activation status updated successfully',
+  })
+  @Patch(':brandId/activate')
+  async activateDeactivateBrand(
+    @Param() param: { brandId: string },
+    @Body() body: BrandStatusDto,
+    @Res() res,
+  ): Promise<void> {
+    const { brandId } = param;
+    const { isActive } = body;
+
+    await this.brandService.editBrand(parseInt(brandId), {status: isActive ? Status.ACTIVE : Status.INACTIVE});
+
+    res.status(HttpStatus.OK).json({
+      message: `Brand ${isActive ? 'activated' : 'deactivated'} successfully`,
+    });
   }
 }
